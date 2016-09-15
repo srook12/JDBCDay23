@@ -3,10 +3,7 @@ package ssa;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class StudentDB {
 	private static Connection connection = null;
@@ -14,7 +11,11 @@ public class StudentDB {
 	
 	private static final String SELECT_STUDENTS = "select * from student";
 	
-	public StudentDB() {
+	// Table names
+	public static final String INSTRUCTOR_TABLE = "instructor";
+	public static final String STUDENT_TABLE = "student";
+	
+	public StudentDB() throws SQLException {
 		connection = DBConnect.getConnection();
 	}
 
@@ -56,7 +57,7 @@ public class StudentDB {
 		return sb.toString();
 	}
 	
-	public void insertStudent(int id, String first, String last, double gpa, 
+	public void insertStudent(String first, String last, double gpa, 
 			int sat, String major) throws SQLException {
 		PreparedStatement pStatement = connection.prepareStatement("select name from major where name = ?");
 		pStatement.setString(1, major);
@@ -64,29 +65,29 @@ public class StudentDB {
 		
 		boolean hasAMajor = resultSet.next();
 		
-		pStatement = connection.prepareStatement("insert into student values (?, ?, ?, ?, ?, ?)");
-		pStatement.setInt(1, id);
-		pStatement.setString(2, first);
-		pStatement.setString(3, last);
-		pStatement.setDouble(4, gpa);
-		pStatement.setInt(5, sat);
+		pStatement = connection.prepareStatement("insert into student (first_name, last_name, gpa, sat, major_id) "
+				+ "values (?, ?, ?, ?, ?)");
+		pStatement.setString(1, first);
+		pStatement.setString(2, last);
+		pStatement.setDouble(3, gpa);
+		pStatement.setInt(4, sat);
 		if(hasAMajor) {
-			pStatement.setInt(6, resultSet.getInt("id"));
+			pStatement.setInt(5, resultSet.getInt("id"));
 		} else {
-			pStatement.setNull(6, java.sql.Types.INTEGER);
+			pStatement.setNull(5, java.sql.Types.INTEGER);
 		}
-		
 		pStatement.executeUpdate();
 	}
 	
-	public void updateStudent(int id, double gpa, int sat, String major) throws SQLException {
+	public void updateStudent(double gpa, int sat, String major) throws SQLException {
 		PreparedStatement pStatement = connection.prepareStatement("select id from major where name = ?");
 		pStatement.setString(1, major);
 		ResultSet resultSet = pStatement.executeQuery();
 		
 		boolean hasAMajor = resultSet.next();
 		
-		pStatement = connection.prepareStatement("update student set gpa = ?, sat = ?, major_id = ? where id = ?");
+		pStatement = connection.prepareStatement("update student set gpa = ?, sat = ?, major_id = ? "
+				+ "where first_name = ? and last_name = ?");
 		pStatement.setDouble(1, gpa);
 		pStatement.setInt(2, sat);
 		if(hasAMajor) {
@@ -94,7 +95,8 @@ public class StudentDB {
 		} else {
 			pStatement.setNull(3, java.sql.Types.INTEGER);
 		}
-		pStatement.setInt(4, id);
+		pStatement.setString(4, "George");
+		pStatement.setString(5, "Washington");
 		
 		pStatement.executeUpdate();
 	}
@@ -107,40 +109,7 @@ public class StudentDB {
 		pStatement.executeUpdate();
 	}
 	
-	public void backUp() throws SQLException {
-		List<String> resultList = backUpInsert("Student");
-		
-		for(String result : resultList) {
-			System.out.println(result);
-		}
-	}
-	
-	private List<String> backUpInsert(String tableName) throws SQLException {
-		PreparedStatement pStatement = connection.prepareStatement("select * from " + tableName);
-		ResultSet resultSet = pStatement.executeQuery();
-		ResultSetMetaData rsmd = resultSet.getMetaData();
-		
-		List<String> insertStatements = new ArrayList<String>();
-		
-		while(resultSet.next()) {
-			StringBuffer sbInsert = new StringBuffer();
-			
-			sbInsert.append("insert into " + tableName + " values (");
-			switch(tableName) {
-				case "Student":
-					sbInsert.append(resultSet.getInt("id")).append(", '");
-					sbInsert.append(resultSet.getString("first_name")).append("', '");
-					sbInsert.append(resultSet.getString("last_name")).append("', ");
-					sbInsert.append(resultSet.getDouble("gpa")).append(", ");
-					sbInsert.append(resultSet.getInt("sat")).append(", ");
-					sbInsert.append(resultSet.getInt("major_id"));
-					break;
-			}
-			sbInsert.append(");");
-			insertStatements.add(sbInsert.toString());
-		}
-		
-		
-		return insertStatements;
+	public void backUp() throws SQLException {		
+		new BackUp(connection);		
 	}
 }
