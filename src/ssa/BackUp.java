@@ -34,7 +34,7 @@ public class BackUp {
 		try {
 			dmd = BackUp.conn.getMetaData();
 			StringBuffer backupFile = new StringBuffer();
-			
+						
 			// Use database
 			backupFile.append("use " + DATABASE_NAME).append("\n\n");
 			
@@ -57,6 +57,18 @@ public class BackUp {
 		}		
 	}
 	
+	private static void printForeignKeys(String tableName) throws SQLException {
+	    java.sql.DatabaseMetaData metaData = conn.getMetaData();
+	    ResultSet foreignKeys = metaData.getExportedKeys(conn.getCatalog(), null, tableName);
+	    while (foreignKeys.next()) {
+	        String fkTableName = foreignKeys.getString("FKTABLE_NAME");
+	        String fkColumnName = foreignKeys.getString("FKCOLUMN_NAME");
+	        String pkTableName = foreignKeys.getString("PKTABLE_NAME");
+	        String pkColumnName = foreignKeys.getString("PKCOLUMN_NAME");
+	        System.out.println(fkTableName + "." + fkColumnName + " -> " + pkTableName + "." + pkColumnName);
+	    }
+	}
+	
 	private void generateDependencyOrder() throws SQLException {
 		extractTableNames();
 		
@@ -69,10 +81,11 @@ public class BackUp {
 			
 			if(checkForeignKeys(tableNames.get(idx))) {
 				dependencyOrder.add(tableNames.remove(idx));
+				
 			} else {		
 				idx++;
 			}
-		}
+		}		
 	}
 		
 	private boolean checkForeignKeys(String tableName) throws SQLException {
@@ -106,7 +119,8 @@ public class BackUp {
 	}
 		
 	private void extractTableNames() throws SQLException {		
-		ResultSet rsTables = dmd.getTables(null, null, null, null);
+		String[] types = {"TABLE"};
+		ResultSet rsTables = dmd.getTables(null, null, null, types);
 		
 		while(rsTables.next()) {			
 			tableNames.add(rsTables.getString("table_name"));

@@ -18,7 +18,7 @@ public class StudentDB {
 	public StudentDB() throws SQLException {
 		connection = DBConnect.getConnection();
 	}
-
+	
 	public String printStudents() throws SQLException {
 		StringBuffer sb = new StringBuffer();
 		pStatement = connection.prepareStatement(SELECT_STUDENTS);		
